@@ -8,6 +8,7 @@ PLACEHOLDER_YEAR = 2000
 
 
 def parse_syslog_time(timestamp):
+
     try:
         return datetime.strptime(
             f"{PLACEHOLDER_YEAR} {timestamp}", "%Y %b %d %H:%M:%S"
@@ -17,6 +18,7 @@ def parse_syslog_time(timestamp):
 
 
 class LogStatistics:
+
     def __init__(self, events: list[dict[str, Any]]):
         self.events = events
 
@@ -33,9 +35,11 @@ class LogStatistics:
         ]
 
     def _event_times(self, event_types: set[str]):
+
         for event in self.events:
             if event.get("event_type") in event_types:
                 parsed_time = parse_syslog_time(event.get("timestamp"))
+
                 if parsed_time:
                     yield parsed_time
 
@@ -58,32 +62,40 @@ class LogStatistics:
         return self._count_events("UNKNOWN")
 
     def top_attacking_ips(self, limit: int = 10) -> list[tuple]:
+
         counter = Counter(
             event.get("source_ip") for event in self._failed_events()
             if event.get("source_ip")
         )
+
         return counter.most_common(limit)
 
     def most_targeted_users(self, limit: int = 10) -> list[tuple]:
+
         counter = Counter(
             event.get("username") for event in self._failed_events()
             if event.get("username")
         )
+
         return counter.most_common(limit)
 
     def login_frequency(self) -> dict:
+
         times = self._event_times(SUCCESS_EVENTS | {"FAILED_SSH_LOGIN"})
         per_hour = Counter(
             time.replace(minute=0, second=0) for time in times
         )
+
         return {
             hour.strftime("%b %d %H:00"): count
             for hour, count in sorted(per_hour.items())
         }
 
     def failed_login_trends(self) -> dict:
+
         times = self._event_times({"FAILED_SSH_LOGIN"})
         per_day = Counter(time.date() for time in times)
+
         return {
             day.strftime("%b %d"): count
             for day, count in sorted(per_day.items())
@@ -94,12 +106,14 @@ class LogStatistics:
             event.get("authentication_method") for event in self.events
             if event.get("authentication_method")
         )
+
         return dict(methods.most_common())
 
     def event_distribution(self) -> dict:
         distribution = Counter(
             event.get("event_type", "UNKNOWN") for event in self.events
         )
+
         return dict(distribution.most_common())
 
     def generate_summary(self) -> dict:
