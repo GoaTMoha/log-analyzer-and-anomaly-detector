@@ -1,0 +1,2 @@
+# Python 3.10 or newer. Everything else uses the standard library.
+Jinja2>=3.1

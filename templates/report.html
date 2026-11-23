@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Linux Authentication Security Report</title>
+  <style>
+    :root { color-scheme: light; --ink:#152238; --muted:#617087; --line:#dce3ec; --panel:#fff; --bg:#f3f6fa; --blue:#174a7e; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif; }
+    .page { width:min(1100px, calc(100% - 32px)); margin:36px auto; }
+    header { padding:28px 32px; background:#102d4b; color:#fff; border-radius:14px; }
+    h1 { margin:0 0 6px; font-size:clamp(25px,4vw,36px); }
+    header p { margin:0; color:#d5e2f0; }
+    section { margin-top:22px; padding:24px; background:var(--panel); border:1px solid var(--line); border-radius:12px; }
+    h2 { margin:0 0 16px; font-size:20px; }
+    .muted { color:var(--muted); }
+    .figures { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; }
+    .figure { padding:16px; border:1px solid var(--line); border-radius:9px; }
+    .figure dt { color:var(--muted); font-size:13px; }
+    .figure dd { margin:6px 0 0; font-size:27px; font-weight:700; }
+    .severity { display:flex; flex-wrap:wrap; gap:10px; }
+    .badge { display:inline-flex; gap:8px; align-items:center; padding:7px 12px; border-radius:20px; background:#edf1f6; font-weight:650; }
+    .critical { color:#991b1b; background:#fee2e2; } .high { color:#9a3412; background:#ffedd5; }
+    .medium { color:#854d0e; background:#fef3c7; } .low { color:#166534; background:#dcfce7; }
+    .finding { padding:17px 0; border-top:1px solid var(--line); }
+    .finding:first-child { border-top:0; padding-top:0; }
+    .finding h3 { display:inline; margin:0 10px 0 0; font-size:16px; }
+    .when { color:var(--muted); font-size:13px; }
+    .description { margin:8px 0; }
+    .meta { display:flex; gap:16px; flex-wrap:wrap; color:var(--muted); font-size:13px; }
+    table { width:100%; border-collapse:collapse; }
+    th,td { text-align:left; padding:10px 12px; border-bottom:1px solid var(--line); }
+    th { background:#f7f9fc; color:#40516a; font-size:13px; }
+    .bar { height:8px; background:#e8edf4; border-radius:8px; overflow:hidden; }
+    .bar span { display:block; height:100%; background:var(--blue); }
+    .empty { color:var(--muted); padding:14px 0; }
+    footer { text-align:center; color:var(--muted); font-size:12px; padding:24px 8px; }
+    @media (max-width:600px) { .page{width:calc(100% - 20px);margin:10px auto} header,section{padding:20px} th,td{padding:8px} }
+    @media print { body{background:white}.page{width:100%;margin:0}header,section{break-inside:avoid;box-shadow:none} }
+  </style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <h1>Security Investigation Report</h1>
+    <p>Linux authentication log analysis</p>
+    <p class="muted">Generated {{ generated_at }}</p>
+  </header>
+
+  <section aria-labelledby="summary-title">
+    <h2 id="summary-title">Executive summary</h2>
+    <dl class="figures">
+      <div class="figure"><dt>Total events</dt><dd>{{ summary.total_events }}</dd></div>
+      <div class="figure"><dt>Successful logins</dt><dd>{{ summary.successful_logins }}</dd></div>
+      <div class="figure"><dt>Failed logins</dt><dd>{{ summary.failed_logins }}</dd></div>
+      <div class="figure"><dt>Unknown events</dt><dd>{{ summary.unknown_events }}</dd></div>
+    </dl>
+  </section>
+
+  <section aria-labelledby="severity-title">
+    <h2 id="severity-title">Severity breakdown</h2>
+    <div class="severity">
+      {% for severity in ["CRITICAL", "HIGH", "MEDIUM", "LOW"] %}
+        <span class="badge {{ severity|lower }}">{{ severity }}: {{ severity_counts.get(severity, 0) }}</span>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section aria-labelledby="findings-title" id="findings">
+    <h2 id="findings-title">Security findings</h2>
+    {% if findings %}
+      {% for finding in findings %}
+        {% set level = (finding.severity or "unknown")|lower %}
+        <article class="finding">
+          <h3>{{ finding.title or "Security detection" }}</h3>
+          <span class="badge {{ level }}">{{ level|upper }}</span>
+          <span class="when">{{ finding.timestamp or "Timestamp unavailable" }}</span>
+          <p class="description">{{ finding.description or "No description available." }}</p>
+          <div class="meta">
+            {% if finding.source_ip %}<span>Source IP: {{ finding.source_ip }}</span>{% endif %}
+            {% if finding.username %}<span>Username: {{ finding.username }}</span>{% endif %}
+            {% if finding.count %}<span>Events: {{ finding.count }}</span>{% endif %}
+          </div>
+        </article>
+      {% endfor %}
+    {% else %}
+      <p class="empty">No suspicious security findings detected.</p>
+    {% endif %}
+  </section>
+
+  <div class="figures">
+    <section aria-labelledby="ips-title">
+      <h2 id="ips-title">Top attacking IP addresses</h2>
+      {% if top_attacker_ips %}
+        <table><thead><tr><th>IP address</th><th>Failed attempts</th></tr></thead><tbody>
+        {% for item in top_attacker_ips %}
+          <tr><td>{{ item.ip }}</td><td>{{ item.count }}</td></tr>
+        {% endfor %}
+        </tbody></table>
+      {% else %}<p class="empty">No failed login IP statistics available.</p>{% endif %}
+    </section>
+    <section aria-labelledby="users-title">
+      <h2 id="users-title">Most targeted usernames</h2>
+      {% if targeted_usernames %}
+        <table><thead><tr><th>Username</th><th>Attempts</th></tr></thead><tbody>
+        {% for item in targeted_usernames %}
+          <tr><td>{{ item.username }}</td><td>{{ item.count }}</td></tr>
+        {% endfor %}
+        </tbody></table>
+      {% else %}<p class="empty">No targeted username statistics available.</p>{% endif %}
+    </section>
+  </div>
+  <footer>Generated by Log Analyzer and Anomaly Detector</footer>
+</div>
+</body>
+</html>

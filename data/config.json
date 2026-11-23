@@ -1,0 +1,16 @@
+{
+    "failed_login_threshold": 5,
+    "brute_force_window_minutes": 10,
+    "multiple_usernames_threshold": 5,
+    "multiple_ips_threshold": 5,
+    "root_login_alert": true,
+    "business_hours": [8, 18],
+    "business_hours_detection": true,
+    "excessive_sudo_threshold": 5,
+    "new_ip_detection": true,
+    "report_output": "reports/",
+    "log_output": "logs/analyzer.log",
+    "log_level": "INFO",
+    "html_report": true,
+    "cli_report": true
+}
